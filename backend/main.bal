@@ -1,23 +1,28 @@
-import ballerina/http;
-import service;
+import ballerina/io;
+import backend.opensky_client as opensky;
 
-service /api on new http:Listener(8080) {
+public function main() {
+    // get OpenSky flight data without authentication
+    json|error? flightDataNonAuth = opensky:getOpenSkyDataNonAuth();
+    json data = [];
 
-    // GET http://localhost:8080/api/getAllData
-    resource function get getAllData() returns json|error {
-        return check service:getAllFlightStates();
+    // check if flight data is emty
+    if flightDataNonAuth is (){
+        io:println("No flight data received (nil response)");
+        return;
+    }else if flightDataNonAuth is error { // check if flight data have errors
+        io:println("Error fetching flight data: ", flightDataNonAuth.message());
+        return;
+    }else { // covert flight data to only json type
+        data = flightDataNonAuth;   
     }
 
-    // GET /api/allFlights
-    resource function get allFlights() returns json|error {
-        return check service:getAllFlightStates();
+    // parse the OpenSky data
+    opensky:AircraftState[] | error aircraftStates = opensky:parseOpenSkyData(data);
+    if aircraftStates is error {
+        io:println("Error parsing OpenSky data: ", aircraftStates.message());
+        return;
     }
+    io:println("Parsed Aircraft States: ", aircraftStates);
 
-    // GET /api/flights?lamin=...&lomin=...&lamax=...&lomax=...
-    resource function get flights(@http:Query string lamin,
-                                  @http:Query string lomin,
-                                  @http:Query string lamax,
-                                  @http:Query string lomax) returns json|error {
-        return check service:getFlightStates(lamin, lomin, lamax, lomax);
-    }
 }

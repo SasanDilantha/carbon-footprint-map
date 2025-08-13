@@ -1,12 +1,12 @@
 [package]
 org = "user"
-name = "carbon_footprint_map"
+name = "backend"
 version = "0.1.0"
 distribution = "2201.12.7"
 
 [build-options]
 observabilityIncluded = true
 
-[env]
-OPENSKY_CLIENT_ID = { secure = true }
-OPENSKY_CLIENT_SECRET = { secure = true }
+[[module]]
+name = "opensky_client"
+path = "modules/opensky_client"
