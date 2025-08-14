@@ -1,5 +1,7 @@
 import ballerina/io;
+import backend.data_types as dt;
 import backend.opensky_client as opensky;
+
 
 public function main() {
     // get OpenSky flight data without authentication
@@ -18,7 +20,7 @@ public function main() {
     }
 
     // parse the OpenSky data
-    opensky:AircraftState[] | error aircraftStates = opensky:parseOpenSkyData(data);
+    dt:AllAircraftState[] | error aircraftStates = opensky:parseOpenSkyData(data);
     if aircraftStates is error {
         io:println("Error parsing OpenSky data: ", aircraftStates.message());
         return;

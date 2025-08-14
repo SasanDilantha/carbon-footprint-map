@@ -10,3 +10,11 @@ observabilityIncluded = true
 [[module]]
 name = "opensky_client"
 path = "modules/opensky_client"
+
+[[module]]
+name = "compute_flight_distance"
+path = "modules/compute_flight_distance"
+
+[[module]]
+name = "data_types"
+path = "modules/data_types"
