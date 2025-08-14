@@ -160,6 +160,17 @@ dependencies = [
 
 [[package]]
 org = "ballerina"
+name = "lang.float"
+version = "0.0.0"
+dependencies = [
+	{org = "ballerina", name = "jballerina.java"}
+]
+modules = [
+	{org = "ballerina", packageName = "lang.float", moduleName = "lang.float"}
+]
+
+[[package]]
+org = "ballerina"
 name = "lang.int"
 version = "0.0.0"
 dependencies = [
@@ -302,10 +313,13 @@ version = "0.1.0"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
+	{org = "ballerina", name = "lang.float"},
 	{org = "ballerinai", name = "observe"}
 ]
 modules = [
 	{org = "user", packageName = "backend", moduleName = "backend"},
+	{org = "user", packageName = "backend", moduleName = "backend.compute_flight_distance"},
+	{org = "user", packageName = "backend", moduleName = "backend.data_types"},
 	{org = "user", packageName = "backend", moduleName = "backend.opensky_client"}
 ]
 
