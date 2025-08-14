@@ -1,25 +1,5 @@
 import ballerina/http;
-
-// Record type definition for a parsed aircraft state
-public type AircraftState record {|
-    string icao24;
-    string|() callsign;
-    string origin_country;
-    int|() time_position;
-    int|() last_contact;
-    float|() longitude;
-    float|() latitude;
-    float|() baro_altitude;
-    boolean on_ground;
-    float|() velocity;
-    float|() heading;
-    float|() vertical_rate;
-    anydata sensors;
-    float|() geo_altitude;
-    string|() squawk;
-    boolean spi;
-    int position_source;
-|};
+import backend.data_types as dt;
 
 // // Make OpenSky Client more configurable
 // configurable string OPENSKY_CLIENT_ID = ?;
@@ -75,7 +55,7 @@ public function getOpenSkyDataNonAuth() returns json|error? {
     return response.getJsonPayload();
 }
 
-public function parseOpenSkyData(json openskyData) returns AircraftState[]|error {
+public function parseOpenSkyData(json openskyData) returns dt:AllAircraftState[]|error {
     // Check if the 'states' field exists and is a json array
     var statesResult = openskyData.states;
     if statesResult is error {
@@ -87,11 +67,11 @@ public function parseOpenSkyData(json openskyData) returns AircraftState[]|error
 
     // Define variables
     json[] states = statesResult;
-    AircraftState[] results = [];
+    dt:AllAircraftState[] results = [];
 
     foreach var state in states {
         if state is json[] {
-            AircraftState aircraft = {
+            dt:AllAircraftState aircraft = {
                 icao24: <string>state[0],
                 callsign: state[1] is string ? <string?>state[1] : (),
                 origin_country: <string>state[2],
