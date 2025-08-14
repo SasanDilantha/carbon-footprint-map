@@ -56,6 +56,6 @@ public function displayDistancesToRef(float refLat, float refLon) returns error?
     map<float> distMap = computeFlightDistance(ref, flights);
 
     foreach var [icao24, distance] in distMap.entries() {
-        io:println("Flight ", icao24, " → Distance: ", distance, " km");
+        io:println("Flight ", icao24, " --> Distance: ", distance, " km");
     }
 }
