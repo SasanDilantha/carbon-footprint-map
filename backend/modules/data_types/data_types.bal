@@ -43,6 +43,13 @@ public function mapToAircraftState(AllAircraftState state) returns AircraftState
     };
 }
 
+// Aircraft flight interval
+public type FlightInterval record {|
+    string icao24;
+    int begin;
+    int end;
+|};
+
 // map to AllAircraftState to Location
 public function mapToLocation(AllAircraftState state) returns Location|error {
     if state.latitude is () || state.longitude is () {

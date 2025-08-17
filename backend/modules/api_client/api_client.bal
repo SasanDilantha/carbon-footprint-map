@@ -84,6 +84,31 @@ public function getFlightDataFromOpenSky() returns json|error? {
     return payload;
 }
 
+// Get Aircraft data from OpenSky API
+public function getOpenSkyAircraftData(dt:FlightInterval flightInterval) returns json|error? {
+    // Get OAuth2 token
+    string token = check getOpenSkyToken();
+
+    // create HTTP Client for OprnSky end poit
+    http:Client aircraft = check  new ("https://opensky-network.org/api");
+    // Define header as map
+    map<string> headers = {
+        "Authorization": string `Bearer ${token}`,
+        "Content-Type": "application/json"
+    };
+
+    // define endpoint for flight data
+    string endpoint = string `/flights/aircraft?icao24=${flightInterval.icao24}&begin=${flightInterval.begin}&end=${flightInterval.end}`;
+    http:Response|error response = aircraft->get(endpoint, headers);
+
+    if response is error {
+        log:printError("Failed to fetch OpenSky aircraft data", 'error = response);
+        return {"error": "Failed to fetch aircraft data"};
+    }
+    return response.getJsonPayload();
+}
+
+
 public function getOpenSkyDataNonAuth() returns json|error? {
     http:Client openSkyClient = check new ("https://opensky-network.org");
     http:Response response = check openSkyClient->get("/api/states/all");
