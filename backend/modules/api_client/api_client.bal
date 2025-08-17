@@ -1,11 +1,14 @@
+import backend.data_types as dt;
+
 import ballerina/http;
 import ballerina/log;
 import ballerina/time;
-import backend.data_types as dt;
 
 // Make OpenSky Client configuration
 configurable string API_OPENSKY_CLIENT_ID = ?;
 configurable string API_OPENSKY_CLIENT_SECRET = ?;
+// Make Climatiq Client configuration
+configurable string API_CLIMATIQ_KEY = ?;
 
 // OpenSky OAuth2 token endpoint
 final string TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
@@ -71,7 +74,6 @@ public function getFlightDataFromOpenSky() returns json|error? {
         "Content-Type": "application/json"
     };
 
-
     // Send GET request with Authorization header
     http:Response|error response = openSkyClient->get("/states/all", headers);
 
@@ -83,31 +85,6 @@ public function getFlightDataFromOpenSky() returns json|error? {
     json payload = check response.getJsonPayload();
     return payload;
 }
-
-// Get Aircraft data from OpenSky API
-public function getOpenSkyAircraftData(dt:FlightInterval flightInterval) returns json|error? {
-    // Get OAuth2 token
-    string token = check getOpenSkyToken();
-
-    // create HTTP Client for OprnSky end poit
-    http:Client aircraft = check  new ("https://opensky-network.org/api");
-    // Define header as map
-    map<string> headers = {
-        "Authorization": string `Bearer ${token}`,
-        "Content-Type": "application/json"
-    };
-
-    // define endpoint for flight data
-    string endpoint = string `/flights/aircraft?icao24=${flightInterval.icao24}&begin=${flightInterval.begin}&end=${flightInterval.end}`;
-    http:Response|error response = aircraft->get(endpoint, headers);
-
-    if response is error {
-        log:printError("Failed to fetch OpenSky aircraft data", 'error = response);
-        return {"error": "Failed to fetch aircraft data"};
-    }
-    return response.getJsonPayload();
-}
-
 
 public function getOpenSkyDataNonAuth() returns json|error? {
     http:Client openSkyClient = check new ("https://opensky-network.org");
@@ -154,4 +131,93 @@ public function parseOpenSkyData(json openskyData) returns dt:AllAircraftState[]
         }
     }
     return results;
+}
+
+// Get Aircraft history data from OpenSky API
+public function getOpenSkyAircraftData(dt:FlightInterval flightInterval) returns json|error? {
+    // Get OAuth2 token
+    string token = check getOpenSkyToken();
+
+    // create HTTP Client for OprnSky end poit
+    http:Client aircraft = check new ("https://opensky-network.org/api");
+    // Define header as map
+    map<string> headers = {
+        "Authorization": string `Bearer ${token}`,
+        "Content-Type": "application/json"
+    };
+
+    // define endpoint for flight data
+    string endpoint = string `/flights/aircraft?icao24=${flightInterval.icao24}&begin=${flightInterval.begin}&end=${flightInterval.end}`;
+    http:Response|error response = aircraft->get(endpoint, headers);
+
+    if response is error {
+        log:printError("Failed to fetch OpenSky aircraft data", 'error = response);
+        return {"error": "Failed to fetch aircraft data"};
+    }
+    return response.getJsonPayload();
+}
+
+// Create Climatiq for CO2 estimation
+public function getClimatiqCO2Estimate(dt:FlightInterval flightInterval) returns json|error? {
+    // define climatiq client
+    http:Client climatiqClient = check new ("https://api.climatiq.io");
+    // Define headers
+    map<string> headers = {
+        "Authorization": string `Bearer ${API_CLIMATIQ_KEY}`,
+        "Content-Type": "application/json"
+    };
+
+    // Fetch flight history for ICAO24
+    json|error flightHistory = getOpenSkyAircraftData(flightInterval);
+    if flightHistory is error {
+        log:printError("Failed to fetch flight history", 'error = flightHistory);
+        return {"error": "Failed to fetch flight history"};
+    }
+    if flightHistory is json[] && flightHistory.length() > 0 {
+        json firstFlight = flightHistory[0];
+        string? departure = firstFlight is map<json> && firstFlight.hasKey("estDepartureAirport") ? <string?>firstFlight["estDepartureAirport"] : ();
+        string? destination = firstFlight is map<json> && firstFlight.hasKey("estArrivalAirport") ? <string?>firstFlight["estArrivalAirport"] : ();
+
+        if departure is () || destination is () {
+            log:printError("Flight history does not contain departure or destination airport", 'flightHistory = flightHistory);
+            return {
+                "icao24": flightInterval.icao24,
+                "flight": firstFlight,
+                "message": "No departure/arrival airport found"
+            };
+        }
+
+        // define request payload
+        json co2Request = {
+            "legs": [
+                {
+                    "from": departure,
+                    "to": destination,
+                    "passengers": 1
+                }
+            ]
+        };
+
+        // Send request to Climatiq API
+        http:Response|error response = climatiqClient->post("/travel/flights", co2Request, headers);
+
+        if response is error {
+            log:printError("Failed to fetch CO2 estimate from Climatiq", 'error = response);
+            return {"error": "Failed to fetch CO2 estimate"};
+        }
+
+        json co2Estimate = check response.getJsonPayload();
+
+        return {
+            "icao24": flightInterval.icao24,
+            "flight": firstFlight,
+            "co2": co2Estimate
+        };
+
+    }
+
+    return {
+        "icao24": flightInterval.icao24,
+        "message": "No flight history found"
+    };
 }
