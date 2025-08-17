@@ -173,10 +173,18 @@ public function getClimatiqCO2Estimate(dt:FlightInterval flightInterval) returns
         log:printError("Failed to fetch flight history", 'error = flightHistory);
         return {"error": "Failed to fetch flight history"};
     }
+    log:printInfo("Fetched flight history successfully", 'flightHistory = flightHistory);
+
+    // Check if flight history is valid and contains data
     if flightHistory is json[] && flightHistory.length() > 0 {
         json firstFlight = flightHistory[0];
+        log:printInfo("First flight data: ", 'firstFlight = firstFlight);
+
         string? departure = firstFlight is map<json> && firstFlight.hasKey("estDepartureAirport") ? <string?>firstFlight["estDepartureAirport"] : ();
+        log:printInfo("Departure airport: ", 'departure = departure);
+
         string? destination = firstFlight is map<json> && firstFlight.hasKey("estArrivalAirport") ? <string?>firstFlight["estArrivalAirport"] : ();
+        log:printInfo("Destination airport: ", 'destination = destination);
 
         if departure is () || destination is () {
             log:printError("Flight history does not contain departure or destination airport", 'flightHistory = flightHistory);
@@ -200,11 +208,11 @@ public function getClimatiqCO2Estimate(dt:FlightInterval flightInterval) returns
 
         // Send request to Climatiq API
         http:Response|error response = climatiqClient->post("/travel/flights", co2Request, headers);
-
         if response is error {
             log:printError("Failed to fetch CO2 estimate from Climatiq", 'error = response);
             return {"error": "Failed to fetch CO2 estimate"};
         }
+        log:printInfo("Fetched CO2 estimate successfully", 'statusCode = response.statusCode, 'payload = check response.getJsonPayload());
 
         json co2Estimate = check response.getJsonPayload();
 
