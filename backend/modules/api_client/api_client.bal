@@ -1,53 +1,88 @@
 import ballerina/http;
+import ballerina/log;
+import ballerina/time;
 import backend.data_types as dt;
 
-// // Make OpenSky Client more configurable
-// configurable string OPENSKY_CLIENT_ID = ?;
-// configurable string OPENSKY_CLIENT_SECRET = ?;
+// Make OpenSky Client configuration
+configurable string API_OPENSKY_CLIENT_ID = ?;
+configurable string API_OPENSKY_CLIENT_SECRET = ?;
 
-// // get opensky token using client credentials
-// public function getOpenSkyToken() returns string|error {
-//     // create client
-//     http:Client openSkyeAuthClient = check new ("https://auth.opensky-network.org");
+// OpenSky OAuth2 token endpoint
+final string TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 
-//     // initialize the form data
-//     map<string|string[]> formData = {
-//         "grant_type": "client_credentials",
-//         "client_id": OPENSKY_CLIENT_ID,
-//         "client_secret": OPENSKY_CLIENT_SECRET
-//     };
+// OAuth2 Token cache
+string accessToken = "";
+int tokenExpiry = 0;
 
-//     // create request obj
-//     http:Request request = new;
-//     request.setHeader("Content-Type", "application/x-www-form-urlencoded");
-//     request.setPayload(formData);
+// Get OpenSky token using client credentials
+public function getOpenSkyToken() returns string|error {
+    // Get current time in seconds
+    time:Utc currentTime = time:utcNow();
+    int now = currentTime[0];
 
-//     // get response
-//     http:Response response = check openSkyeAuthClient->post("/auth/realms/opensky-network/protocol/openid-connect/token", request);
+    // Return cached token if still valid
+    if accessToken != "" && now < tokenExpiry {
+        return accessToken;
+    }
 
-//     // convert to json
-//     json responseBody = check response.getJsonPayload();
-//     if responseBody is map<json> && responseBody.hasKey("access_token") {
-//         string token = <string>responseBody["access_token"];
-//         return token;
-//     } else {
-//         return error("Failed to get OpenSky token: access_token not found in response");
-//     }
-// }
+    // Create form data for the POST request
+    string body = string `grant_type=client_credentials&client_id=${API_OPENSKY_CLIENT_ID}&client_secret=${API_OPENSKY_CLIENT_SECRET}`;
 
-// public function getFlightDataFromOpenSky() returns json | error?{
-//     // create the OpenSky client for get flight data
-//     http:Client openSkyClient = check new ("https://opensky-network.org");
+    // Create HTTP client for token endpoint
+    http:Client openSkyAuthClient = check new (TOKEN_URL);
 
-//     // create authorization header
-//     string token = check getOpenSkyToken();
-//     map<string> headers = { "Authorization": "Bearer " + token };
+    // Create request with headers and payload
+    http:Request request = new;
+    request.setHeader("Content-Type", "application/x-www-form-urlencoded");
+    request.setTextPayload(body);
 
-//     // create response object
-//     http:Response response = check openSkyClient->get("/api/states/all", headers = headers);
+    // Send POST request
+    http:Response response = check openSkyAuthClient->post("", request);
 
-//     return response.getJsonPayload();
-// }
+    // Parse response
+    json payload = check response.getJsonPayload();
+    if payload is map<json> && payload.hasKey("access_token") {
+        // Extract access_token as a string
+        string accessToken = <string>payload["access_token"];
+        if payload["expires_in"] is int {
+            tokenExpiry = now + <int>payload["expires_in"] - 30; // Refresh 30s earlier
+        } else {
+            string expiresInStr = payload["expires_in"].toString();
+            int expiresIn = check int:fromString(expiresInStr);
+            tokenExpiry = now + expiresIn - 30;
+        }
+        return accessToken;
+    } else {
+        return error("Failed to get OpenSky token: access_token not found in response");
+    }
+}
+
+// Get flight data from OpenSky API
+public function getFlightDataFromOpenSky() returns json|error? {
+    // Get OAuth2 token
+    string token = check getOpenSkyToken();
+
+    // Create HTTP client for OpenSky API
+    http:Client openSkyClient = check new ("https://opensky-network.org/api");
+    // create request with Authorization header
+    // Define headers as a map
+    map<string> headers = {
+        "Authorization": string `Bearer ${token}`,
+        "Content-Type": "application/json"
+    };
+
+
+    // Send GET request with Authorization header
+    http:Response|error response = openSkyClient->get("/states/all", headers);
+
+    if response is error {
+        log:printError("Failed to fetch OpenSky states", 'error = response);
+        return {"error": "Failed to fetch states"};
+    }
+
+    json payload = check response.getJsonPayload();
+    return payload;
+}
 
 public function getOpenSkyDataNonAuth() returns json|error? {
     http:Client openSkyClient = check new ("https://opensky-network.org");

@@ -1,11 +1,18 @@
-// import ballerina/io;
+import ballerina/io;
 // import backend.data_types as dt;
-// import backend.opensky_client as opensky;
-
-import backend.compute_flight_distance as cfd;
+import backend.api_client as api;
+// import backend.compute_flight_distance as cfd;
 
 
 public function main() returns error? {
+    // test auth opensky api
+    json|error? flightData = api:getFlightDataFromOpenSky();
+
+    if flightData is error{
+        io:println("Error fetching flight data: ", flightData.message());
+    }
+    io:print("Fetched Flight Data (Auth): ", flightData);
+
     // // get OpenSky flight data without authentication
     // json|error? flightDataNonAuth = opensky:getOpenSkyDataNonAuth();
     // json data = [];
@@ -29,6 +36,6 @@ public function main() returns error? {
     // }
     // io:println("Parsed Aircraft States: ", aircraftStates);
 
-    check cfd:displayDistancesToRef(51.509865, -0.118092);
+    // check cfd:displayDistancesToRef(51.509865, -0.118092);
 
 }
