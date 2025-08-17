@@ -8,8 +8,8 @@ distribution = "2201.12.7"
 observabilityIncluded = true
 
 [[module]]
-name = "opensky_client"
-path = "modules/opensky_client"
+name = "api_client"
+path = "modules/api_client"
 
 [[module]]
 name = "compute_flight_distance"

@@ -1,7 +1,7 @@
 import ballerina/io;
 import backend.data_types as dt;
 import ballerina/lang.'float as flt;
-import backend.opensky_client as opensky;
+import backend.api_client as api;
 
 // convert degrees to radians
 public function degreesToRadians(float degrees) returns float {
@@ -40,12 +40,12 @@ public function computeFlightDistance(dt:Location ref, dt:AircraftState[] flight
 // Display distances from a reference point to aircraft
 public function displayDistancesToRef(float refLat, float refLon) returns error? {
     // get data from OpenSky
-    json | error fetchAircraftStates = opensky:getOpenSkyDataNonAuth();
+    json | error fetchAircraftStates = api:getOpenSkyDataNonAuth();
     // map json to AllAircraftState array
     if fetchAircraftStates is error {
         return error("Error fetching flight data: " + fetchAircraftStates.message());
     }
-    dt:AllAircraftState[] | error states = opensky:parseOpenSkyData(fetchAircraftStates);
+    dt:AllAircraftState[] | error states = api:parseOpenSkyData(fetchAircraftStates);
 
     if states is error {
         return error("Error parsing OpenSky data: " + states.message());
