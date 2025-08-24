@@ -8,8 +8,12 @@ distribution = "2201.12.7"
 observabilityIncluded = true
 
 [[module]]
-name = "opensky_client"
-path = "modules/opensky_client"
+name = "api_client"
+path = "modules/api_client"
+
+[[module]]
+name = "fetching_data"
+path = "modules/fetching_data"
 
 [[module]]
 name = "compute_flight_distance"
@@ -18,3 +22,7 @@ path = "modules/compute_flight_distance"
 [[module]]
 name = "data_types"
 path = "modules/data_types"
+
+[[module]]
+name = "service"
+path = "modules/service"

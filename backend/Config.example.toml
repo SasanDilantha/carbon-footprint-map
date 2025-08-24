@@ -1,0 +1,4 @@
+[backend.api_client]
+API_OPENSKY_CLIENT_ID = "your_client_id_here"
+API_OPENSKY_CLIENT_SECRET = "your_client_secret_here"
+API_CLIMATIQ_KEY = "your_climatiq_key_here"
